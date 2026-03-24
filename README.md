@@ -41,11 +41,20 @@ npm run build
 
 ## GitHub Pages 公開
 
-1. `npm install`
-2. `npm run build`
-3. `dist/` の内容を Pages の公開対象にする
+GitHub Actions で自動 deploy できます。
 
-Actions で自動化する場合は `dist/` を artifact/deploy 対象にしてください。
+1. GitHub の `Settings > Pages` を開く
+2. `Build and deployment` の `Source` を `GitHub Actions` にする
+3. `main` へ push する
+
+追加した workflow は次を実行します。
+
+- `pull_request`: `npm test` と `npm run build`
+- `push` to `main`: `npm test` と `npm run build` のあと Pages へ deploy
+- `workflow_dispatch`: `main` 上で手動実行すると同じ内容で deploy
+
+テストでは Playwright の Chromium をインストールしてから `npm test` を実行します。  
+deploy 対象は `dist/` です。
 
 ## 使い方
 
