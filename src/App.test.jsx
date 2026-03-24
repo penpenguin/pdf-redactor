@@ -2,13 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { App } from "./App.jsx";
-
-vi.mock("@embedpdf/react-pdf-viewer", async () => {
+vi.mock("./PdfViewerPane.jsx", async () => {
   const React = await import("react");
 
   return {
-    PDFViewer: React.forwardRef(function MockPDFViewer(props, ref) {
+    default: React.forwardRef(function MockPDFViewer(props, ref) {
       React.useImperativeHandle(ref, () => ({
         container: null,
         registry: Promise.resolve(globalThis.__TEST_REGISTRY__),
@@ -22,6 +20,8 @@ vi.mock("@embedpdf/react-pdf-viewer", async () => {
     }),
   };
 });
+
+import { App } from "./App.jsx";
 
 function resolvedTask(value) {
   return {
@@ -238,6 +238,9 @@ describe("App", () => {
 
     const user = userEvent.setup();
     render(<App />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("PDFを選択")).toBeEnabled();
+    });
 
     const file = new File([new Uint8Array([37, 80, 68, 70])], "sample.pdf", {
       type: "application/pdf",

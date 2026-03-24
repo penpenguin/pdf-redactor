@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PDFViewer } from "@embedpdf/react-pdf-viewer";
 
 import { buildRedactedFilename, downloadBuffer } from "./download.js";
+import { LazyPdfViewer } from "./LazyPdfViewer.jsx";
 import {
   appendGroup,
   clearGroups,
@@ -365,22 +365,10 @@ export function App() {
             削除してダウンロード
           </button>
         </div>
-        <p className="status">{status}</p>
       </header>
 
       <main className="layout">
         <aside className="sidebar">
-          <section className="panel">
-            <h2>使い方</h2>
-            <ol>
-              <li>PDFを選択</li>
-              <li>表示されたPDF上で文字列をドラッグ選択</li>
-              <li>「選択範囲を追加」を押す</li>
-              <li>最後に「削除してダウンロード」</li>
-            </ol>
-            <p className="note">GitHub Pages で動作するよう、PDF はブラウザ内でそのまま処理します。</p>
-          </section>
-
           <section className="panel">
             <h2>現在の選択</h2>
             {pendingSelection ? (
@@ -414,14 +402,31 @@ export function App() {
               <div className="empty">まだ削除範囲はありません。</div>
             )}
           </section>
+
+          <section className="panel">
+            <h2>使い方</h2>
+            <ol>
+              <li>PDFを選択</li>
+              <li>表示されたPDF上で文字列をドラッグ選択</li>
+              <li>「選択範囲を追加」を押す</li>
+              <li>最後に「削除してダウンロード」</li>
+            </ol>
+            <p className="note">サーバー不要で、クライアントだけで動作します。</p>
+          </section>
         </aside>
 
         <section className="viewer-frame">
-          <PDFViewer
+          <p className="status status--viewer">{status}</p>
+          <LazyPdfViewer
             ref={viewerRef}
             className="viewer"
             style={{ width: "100%", height: "100%" }}
             onReady={handleViewerReady}
+            fallback={
+              <div className="viewer viewer--loading">
+                PDF エンジンを読み込んでいます…
+              </div>
+            }
             config={{
               tabBar: "never",
               worker: false,
