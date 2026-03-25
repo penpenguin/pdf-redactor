@@ -61,6 +61,23 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.icon-button--close {
+  min-width: 40px;
+  min-height: 40px;
+  font-size: 1.1rem;
+}
+
 .button--primary {
   border-color: rgba(180, 83, 9, 0.32);
   background: linear-gradient(135deg, #cf6b11 0%, #b45309 100%);
@@ -77,6 +94,7 @@ button:disabled {
 .toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--line);
@@ -85,6 +103,12 @@ button:disabled {
 }
 
 .toolbar__left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.toolbar__right {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -152,6 +176,68 @@ button:disabled {
 }
 
 .panel ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.license-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.license-list li + li {
+  margin-top: 8px;
+}
+
+.license-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(180, 83, 9, 0.32);
+  text-underline-offset: 0.18em;
+}
+
+.license-list a:hover {
+  text-decoration-color: currentColor;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(41, 25, 13, 0.34);
+  backdrop-filter: blur(8px);
+}
+
+.modal {
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 251, 245, 0.98);
+  box-shadow: var(--shadow);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 0;
+}
+
+.modal__header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.modal__body {
+  padding: 12px 20px 20px;
+}
+
+.modal__body ol {
   margin: 0;
   padding-left: 18px;
 }
@@ -234,6 +320,10 @@ button:disabled {
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .toolbar__right {
+    align-self: flex-end;
   }
 
   .layout {

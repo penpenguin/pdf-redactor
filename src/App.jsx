@@ -17,6 +17,29 @@ const PLUGIN_ID = {
   export: "export",
 };
 
+const licenseDocuments = [
+  {
+    label: "PDFium wrapper (MIT)",
+    href: "licenses/embedpdf/pdfium/LICENSE",
+  },
+  {
+    label: "PDFium bundled license",
+    href: "licenses/embedpdf/pdfium/LICENSE.pdfium",
+  },
+  {
+    label: "EmbedPDF React Viewer (MIT)",
+    href: "licenses/embedpdf/react-pdf-viewer/LICENSE",
+  },
+  {
+    label: "EmbedPDF Snippet (MIT)",
+    href: "licenses/embedpdf/snippet/LICENSE",
+  },
+  {
+    label: "EmbedPDF Engines (MIT)",
+    href: "licenses/embedpdf/engines/LICENSE",
+  },
+];
+
 const pdfiumWasmUrl = `${import.meta.env.BASE_URL}pdfium.wasm`;
 
 function getCapability(registry, pluginId) {
@@ -76,6 +99,7 @@ export function App() {
   const [pendingSelection, setPendingSelection] = useState(null);
   const [groups, setGroups] = useState([]);
   const [isWorking, setIsWorking] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
 
   useEffect(() => {
     activeDocumentIdRef.current = activeDocumentId;
@@ -183,6 +207,23 @@ export function App() {
     };
   }, [registryReady]);
 
+  useEffect(() => {
+    if (!activeModal) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setActiveModal(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeModal]);
+
   const listEntries = useMemo(() => toListEntries(groups).slice().reverse(), [groups]);
 
   const addButtonDisabled = !activeDocumentId || !pendingSelection || isWorking;
@@ -190,6 +231,10 @@ export function App() {
   const undoButtonDisabled = !activeDocumentId || !hasRedactions || isWorking;
   const clearButtonDisabled = !activeDocumentId || !hasRedactions || isWorking;
   const downloadButtonDisabled = !activeDocumentId || !hasRedactions || isWorking;
+  const isHelpModalOpen = activeModal === "help";
+  const isLicensesModalOpen = activeModal === "licenses";
+
+  const modalTitle = isHelpModalOpen ? "使い方" : "Licenses";
 
   async function handleViewerReady(registry) {
     registryRef.current = registry;
@@ -365,6 +410,24 @@ export function App() {
             削除してダウンロード
           </button>
         </div>
+        <div className="toolbar__right">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="使い方"
+            onClick={() => setActiveModal("help")}
+          >
+            <span aria-hidden="true">?</span>
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Licenses"
+            onClick={() => setActiveModal("licenses")}
+          >
+            <span aria-hidden="true">L</span>
+          </button>
+        </div>
       </header>
 
       <main className="layout">
@@ -401,17 +464,6 @@ export function App() {
             ) : (
               <div className="empty">まだ削除範囲はありません。</div>
             )}
-          </section>
-
-          <section className="panel">
-            <h2>使い方</h2>
-            <ol>
-              <li>PDFを選択</li>
-              <li>表示されたPDF上で文字列をドラッグ選択</li>
-              <li>「選択範囲を追加」を押す</li>
-              <li>最後に「削除してダウンロード」</li>
-            </ol>
-            <p className="note">サーバー不要で、クライアントだけで動作します。</p>
           </section>
         </aside>
 
@@ -464,6 +516,57 @@ export function App() {
           />
         </section>
       </main>
+
+      {activeModal ? (
+        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={modalTitle}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal__header">
+              <h2>{modalTitle}</h2>
+              <button
+                type="button"
+                className="icon-button icon-button--close"
+                aria-label={`${modalTitle}を閉じる`}
+                onClick={() => setActiveModal(null)}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            {isHelpModalOpen ? (
+              <div className="modal__body">
+                <ol>
+                  <li>PDFを選択</li>
+                  <li>表示されたPDF上で文字列をドラッグ選択</li>
+                  <li>「選択範囲を追加」を押す</li>
+                  <li>最後に「削除してダウンロード」</li>
+                </ol>
+                <p className="note">サーバー不要で、クライアントだけで動作します。</p>
+              </div>
+            ) : (
+              <div className="modal__body">
+                <p className="note">
+                  同梱している third-party license 原文です。ローカル配布物内のファイルへ直接リンクしています。
+                </p>
+                <ul className="license-list">
+                  {licenseDocuments.map((document) => (
+                    <li key={document.href}>
+                      <a href={`${import.meta.env.BASE_URL}${document.href}`} target="_blank" rel="noreferrer">
+                        {document.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

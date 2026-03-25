@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./PdfViewerPane.jsx", async () => {
   const React = await import("react");
@@ -232,6 +232,11 @@ describe("App", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   });
 
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
   it("ファイル読み込みから追加、ダウンロードまで進められる", async () => {
     const testRegistry = createRegistry();
     globalThis.__TEST_REGISTRY__ = testRegistry.registry;
@@ -284,6 +289,73 @@ describe("App", () => {
     await waitFor(() => {
       expect(testRegistry.spies.commitAllPending).toHaveBeenCalledTimes(1);
       expect(testRegistry.spies.saveAsCopy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("ヘッダー右の Licenses ボタンからローカル同梱ライセンス一覧を開ける", async () => {
+    const testRegistry = createRegistry();
+    globalThis.__TEST_REGISTRY__ = testRegistry.registry;
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Licenses" }));
+
+    const licensesDialog = await screen.findByRole("dialog", { name: "Licenses" });
+    expect(licensesDialog).toBeInTheDocument();
+
+    expect(screen.getByRole("link", { name: "PDFium wrapper (MIT)" })).toHaveAttribute(
+      "href",
+      `${import.meta.env.BASE_URL}licenses/embedpdf/pdfium/LICENSE`
+    );
+    expect(screen.getByRole("link", { name: "PDFium bundled license" })).toHaveAttribute(
+      "href",
+      `${import.meta.env.BASE_URL}licenses/embedpdf/pdfium/LICENSE.pdfium`
+    );
+    expect(screen.getByRole("link", { name: "EmbedPDF React Viewer (MIT)" })).toHaveAttribute(
+      "href",
+      `${import.meta.env.BASE_URL}licenses/embedpdf/react-pdf-viewer/LICENSE`
+    );
+    expect(screen.getByRole("link", { name: "EmbedPDF Snippet (MIT)" })).toHaveAttribute(
+      "href",
+      `${import.meta.env.BASE_URL}licenses/embedpdf/snippet/LICENSE`
+    );
+    expect(screen.getByRole("link", { name: "EmbedPDF Engines (MIT)" })).toHaveAttribute(
+      "href",
+      `${import.meta.env.BASE_URL}licenses/embedpdf/engines/LICENSE`
+    );
+  });
+
+  it("ヘッダー右の 使い方 ボタンからヘルプモーダルを開ける", async () => {
+    const testRegistry = createRegistry();
+    globalThis.__TEST_REGISTRY__ = testRegistry.registry;
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "使い方" }));
+
+    const helpDialog = await screen.findByRole("dialog", { name: "使い方" });
+    expect(helpDialog).toBeInTheDocument();
+    expect(within(helpDialog).getByText("PDFを選択")).toBeInTheDocument();
+    expect(within(helpDialog).getByText("表示されたPDF上で文字列をドラッグ選択")).toBeInTheDocument();
+    expect(within(helpDialog).getByText("サーバー不要で、クライアントだけで動作します。")).toBeInTheDocument();
+  });
+
+  it("開いたモーダルは Escape で閉じられる", async () => {
+    const testRegistry = createRegistry();
+    globalThis.__TEST_REGISTRY__ = testRegistry.registry;
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Licenses" }));
+    expect(await screen.findByRole("dialog", { name: "Licenses" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Licenses" })).not.toBeInTheDocument();
     });
   });
 });
