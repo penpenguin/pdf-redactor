@@ -2,10 +2,20 @@ function createGroupId() {
   return `group-${crypto.randomUUID()}`;
 }
 
+function itemKey(item) {
+  return `${item.page}:${item.id}`;
+}
+
 function buildSignature(items) {
   return items
     .map((item) => `${item.page}:${item.id}:${item.kind}:${item.text ?? ""}`)
     .join("|");
+}
+
+function flattenPending(pending) {
+  return Object.entries(pending ?? {})
+    .sort(([leftPage], [rightPage]) => Number(leftPage) - Number(rightPage))
+    .flatMap(([, items]) => items ?? []);
 }
 
 export function appendGroup(groups, items) {
@@ -41,6 +51,20 @@ export function removeItemsFromGroups(groups, removals) {
 
 export function clearGroups() {
   return [];
+}
+
+export function diffPendingItems(previousPending, nextPending) {
+  const previousItems = flattenPending(previousPending);
+  const nextItems = flattenPending(nextPending);
+  const previousKeys = new Set(previousItems.map(itemKey));
+  const nextKeys = new Set(nextItems.map(itemKey));
+
+  return {
+    addedItems: nextItems.filter((item) => !previousKeys.has(itemKey(item))),
+    removedItems: previousItems
+      .filter((item) => !nextKeys.has(itemKey(item)))
+      .map(({ page, id }) => ({ page, id })),
+  };
 }
 
 export function toListEntries(groups) {

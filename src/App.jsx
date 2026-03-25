@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import pdfiumWasmUrl from "@embedpdf/pdfium/pdfium.wasm?url";
 
 import { buildRedactedFilename, downloadBuffer } from "./download.js";
 import { LazyPdfViewer } from "./LazyPdfViewer.jsx";
 import {
   appendGroup,
   clearGroups,
+  diffPendingItems,
   removeItemsFromGroups,
   toListEntries,
 } from "./redaction-groups.js";
@@ -39,8 +41,6 @@ const licenseDocuments = [
     href: "licenses/embedpdf/engines/LICENSE",
   },
 ];
-
-const pdfiumWasmUrl = `${import.meta.env.BASE_URL}pdfium.wasm`;
 
 function getCapability(registry, pluginId) {
   return registry?.getPlugin(pluginId)?.provides?.() ?? null;
@@ -91,6 +91,7 @@ export function App() {
   const registryRef = useRef(null);
   const activeDocumentIdRef = useRef(null);
   const currentFilenameRef = useRef("");
+  const pendingItemsRef = useRef({});
 
   const [status, setStatus] = useState("PDFを読み込んでください。");
   const [registryReady, setRegistryReady] = useState(false);
@@ -127,6 +128,7 @@ export function App() {
           activeDocumentIdRef.current = currentDocumentId;
           setActiveDocumentId(currentDocumentId);
           if (!currentDocumentId) {
+            pendingItemsRef.current = {};
             setPendingSelection(null);
             setGroups([]);
           }
@@ -196,6 +198,34 @@ export function App() {
           if (event.type === "clear" || (event.type === "commit" && event.success)) {
             setGroups(clearGroups);
           }
+        })
+      );
+    }
+
+    if (redaction?.onPendingChange) {
+      unsubs.push(
+        redaction.onPendingChange(({ documentId, pending }) => {
+          if (documentId !== activeDocumentIdRef.current) {
+            return;
+          }
+
+          const nextPending = pending ?? {};
+          const { addedItems, removedItems } = diffPendingItems(pendingItemsRef.current, nextPending);
+          pendingItemsRef.current = nextPending;
+
+          setGroups((current) => {
+            let nextGroups = current;
+
+            if (removedItems.length > 0) {
+              nextGroups = removeItemsFromGroups(nextGroups, removedItems);
+            }
+
+            if (addedItems.length > 0) {
+              nextGroups = appendGroup(nextGroups, addedItems);
+            }
+
+            return Object.keys(nextPending).length === 0 ? clearGroups() : nextGroups;
+          });
         })
       );
     }
@@ -270,6 +300,7 @@ export function App() {
       );
 
       setCurrentFilename(file.name);
+      pendingItemsRef.current = {};
       setPendingSelection(null);
       setGroups([]);
 

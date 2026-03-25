@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendGroup,
   clearGroups,
+  diffPendingItems,
   removeItemsFromGroups,
   toListEntries,
 } from "./redaction-groups.js";
@@ -79,5 +80,21 @@ describe("redaction-groups", () => {
     const duplicated = appendGroup(once, items);
 
     expect(duplicated).toHaveLength(1);
+  });
+
+  it("pending 差分から追加 item と削除 item を抽出する", () => {
+    const previousPending = {
+      0: [makeItem({ id: "a-1", page: 0, text: "alpha" })],
+      1: [makeItem({ id: "b-1", page: 1, text: "beta" })],
+    };
+    const nextPending = {
+      0: [makeItem({ id: "a-1", page: 0, text: "alpha" })],
+      2: [makeItem({ id: "c-1", page: 2, text: "gamma" })],
+    };
+
+    expect(diffPendingItems(previousPending, nextPending)).toEqual({
+      addedItems: [makeItem({ id: "c-1", page: 2, text: "gamma" })],
+      removedItems: [{ page: 1, id: "b-1" }],
+    });
   });
 });

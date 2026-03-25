@@ -41,7 +41,7 @@ npm run build
 
 ## Third-party assets and licenses
 
-- `pdfium.wasm` は source control せず、build 時に installed package の `@embedpdf/pdfium` から `dist/` へ取り込みます。
+- `pdfium.wasm` は Vite が `@embedpdf/pdfium` package asset として解決し、build 後は `dist/assets/pdfium-*.wasm` として出力されます。
 - third-party license 原文は build artifact の `dist/licenses/` 配下に同梱されます。
 - アプリ UI のヘッダー右にある `Licenses` アイコンから、同梱済み原文へ直接アクセスできます。
 - 将来 font file を配布する場合は、対応する `@embedpdf/fonts-*` の `LICENSE` も同時コピー対象にします。
@@ -62,6 +62,7 @@ GitHub Actions で自動 deploy できます。
 
 テストでは Playwright の Chromium をインストールしてから `npm test` を実行します。  
 deploy 対象は `dist/` です。
+Vite の build base は `./` なので、GitHub Pages の project subpath 配下でも asset と `Licenses` へのリンクが root absolute 前提になりません。
 
 ## 使い方
 
@@ -76,7 +77,8 @@ deploy 対象は `dist/` です。
 ## 実装メモ
 
 - Redaction は PDFium WASM をブラウザ内で実行して適用します。
-- `dist/pdfium.wasm` は build 後に `@embedpdf/pdfium` package からコピーして初期化します。
+- `config.wasmUrl` には `@embedpdf/pdfium/pdfium.wasm?url` で解決した package asset URL を渡します。
+- build 後コピー script は `dist/licenses/` への third-party license 原文コピー専用です。
 - 旧構成の `FastAPI + PyMuPDF` は廃止しました。
 - 一覧表示の undo/clear は UI 側でグループ管理しています。
 

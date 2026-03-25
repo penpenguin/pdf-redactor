@@ -28,6 +28,19 @@ describe("copyThirdPartyAssets", () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
+  it("コピー対象は license 原文だけを含む", () => {
+    expect(requiredCopyTargets).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ destination: "pdfium.wasm" })])
+    );
+    expect(requiredCopyTargets).toEqual(
+      expect.arrayContaining([expect.objectContaining({ destination: "licenses/embedpdf/pdfium/LICENSE" })])
+    );
+
+    for (const target of requiredCopyTargets) {
+      expect(target.destination).toMatch(/^licenses\//);
+    }
+  });
+
   it("必須ファイルを dist 配下へコピーする", async () => {
     const { projectRoot, distDir } = await createTempProject();
 

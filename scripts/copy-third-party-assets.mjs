@@ -4,10 +4,6 @@ import { fileURLToPath } from "node:url";
 
 export const requiredCopyTargets = [
   {
-    source: "node_modules/@embedpdf/pdfium/dist/pdfium.wasm",
-    destination: "pdfium.wasm",
-  },
-  {
     source: "node_modules/@embedpdf/pdfium/LICENSE",
     destination: "licenses/embedpdf/pdfium/LICENSE",
   },

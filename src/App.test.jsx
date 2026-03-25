@@ -7,6 +7,8 @@ vi.mock("./PdfViewerPane.jsx", async () => {
 
   return {
     default: React.forwardRef(function MockPDFViewer(props, ref) {
+      globalThis.__TEST_VIEWER_PROPS__ = props;
+
       React.useImperativeHandle(ref, () => ({
         container: null,
         registry: Promise.resolve(globalThis.__TEST_REGISTRY__),
@@ -45,7 +47,7 @@ function createEventHook() {
   };
 }
 
-function createRegistry() {
+function createRegistry({ emitRedactionEvents = true } = {}) {
   const activeDocumentChanged = createEventHook();
   const documentOpened = createEventHook();
   const selectionChanged = createEventHook();
@@ -102,11 +104,13 @@ function createRegistry() {
     ];
 
     redactionState.groups = items;
-    redactionChanged.emit({
-      type: "add",
-      documentId: "doc-1",
-      items,
-    });
+    if (emitRedactionEvents) {
+      redactionChanged.emit({
+        type: "add",
+        documentId: "doc-1",
+        items,
+      });
+    }
     pendingChanged.emit({
       documentId: "doc-1",
       pending: { 0: items },
@@ -117,12 +121,14 @@ function createRegistry() {
 
   const removePending = vi.fn((page, id) => {
     redactionState.groups = redactionState.groups.filter((item) => item.page !== page || item.id !== id);
-    redactionChanged.emit({
-      type: "remove",
-      documentId: "doc-1",
-      page,
-      id,
-    });
+    if (emitRedactionEvents) {
+      redactionChanged.emit({
+        type: "remove",
+        documentId: "doc-1",
+        page,
+        id,
+      });
+    }
     pendingChanged.emit({
       documentId: "doc-1",
       pending: {},
@@ -131,10 +137,12 @@ function createRegistry() {
 
   const clearPending = vi.fn(() => {
     redactionState.groups = [];
-    redactionChanged.emit({
-      type: "clear",
-      documentId: "doc-1",
-    });
+    if (emitRedactionEvents) {
+      redactionChanged.emit({
+        type: "clear",
+        documentId: "doc-1",
+      });
+    }
     pendingChanged.emit({
       documentId: "doc-1",
       pending: {},
@@ -142,11 +150,13 @@ function createRegistry() {
   });
 
   const commitAllPending = vi.fn(async () => {
-    redactionChanged.emit({
-      type: "commit",
-      documentId: "doc-1",
-      success: true,
-    });
+    if (emitRedactionEvents) {
+      redactionChanged.emit({
+        type: "commit",
+        documentId: "doc-1",
+        success: true,
+      });
+    }
     return true;
   });
 
@@ -227,6 +237,7 @@ function createRegistry() {
 describe("App", () => {
   beforeEach(() => {
     globalThis.__TEST_REGISTRY__ = null;
+    globalThis.__TEST_VIEWER_PROPS__ = null;
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     vi.spyOn(URL, "revokeObjectURL").mockReturnValue();
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -290,6 +301,58 @@ describe("App", () => {
       expect(testRegistry.spies.commitAllPending).toHaveBeenCalledTimes(1);
       expect(testRegistry.spies.saveAsCopy).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("redaction event が来なくても pending change だけで追加一覧を更新できる", async () => {
+    const testRegistry = createRegistry({ emitRedactionEvents: false });
+    globalThis.__TEST_REGISTRY__ = testRegistry.registry;
+
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("PDFを選択")).toBeEnabled();
+    });
+
+    const file = new File([new Uint8Array([37, 80, 68, 70])], "sample.pdf", {
+      type: "application/pdf",
+    });
+    await user.upload(screen.getByLabelText("PDFを選択"), file);
+
+    await screen.findByText("sample.pdf を読み込みました。文字列をドラッグ選択してください。");
+
+    testRegistry.selectionState.text = ["alpha secret"];
+    testRegistry.selectionState.formatted = [
+      {
+        pageIndex: 0,
+        rect: { left: 0.1, top: 0.2, width: 0.4, height: 0.1 },
+        segmentRects: [{ left: 0.1, top: 0.2, width: 0.4, height: 0.1 }],
+      },
+    ];
+    testRegistry.selectionChanged.emit({
+      documentId: "doc-1",
+      selection: { start: { page: 0, index: 0 }, end: { page: 0, index: 11 } },
+      modeId: "default",
+    });
+
+    await user.click(screen.getByRole("button", { name: "選択範囲を追加" }));
+
+    await screen.findByText("1 範囲");
+  });
+
+  it("viewer 初期化には bundle 解決済みの wasm URL を渡す", async () => {
+    const testRegistry = createRegistry();
+    globalThis.__TEST_REGISTRY__ = testRegistry.registry;
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(globalThis.__TEST_VIEWER_PROPS__).toBeTruthy();
+    });
+
+    expect(globalThis.__TEST_VIEWER_PROPS__.config.wasmUrl).not.toBe(
+      `${import.meta.env.BASE_URL}pdfium.wasm`
+    );
+    expect(globalThis.__TEST_VIEWER_PROPS__.config.wasmUrl).toMatch(/pdfium.*\.wasm/);
   });
 
   it("ヘッダー右の Licenses ボタンからローカル同梱ライセンス一覧を開ける", async () => {
